@@ -2,6 +2,8 @@
 
 Prunes Kubernetes namespaces based on a repo's Github PR 
 
+Dockerhub: https://hub.docker.com/r/maktouch/namespace-cleaner
+
 ## Why? 
 
 ```mermaid
