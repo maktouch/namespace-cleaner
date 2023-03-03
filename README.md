@@ -5,11 +5,14 @@ Prunes Kubernetes namespaces based on a repo's Github PR
 ## Why? 
 
 ```mermaid
-graph TD;
-    Open PR-->Build;
-    Build-->Deploy Review;
-    Deploy Review-->Merge/Close;
-    Merge/Close-->Delete Namespace;
+flowchart TD
+    A[Open PR] --> B[Build]
+    B --> C[Deploy App in Namespace]
+    C --> D[Merge];
+    C --> E[Close]
+    D --> F[Delete Namespace];
+    E --> F
+    
 ```
 
 When a PR opens, we start the build, which takes a few minutes. After that, it gets deployed to our review cluster, in a dedicated namespace. Once the PR is merged or closed, an action triggers the deletion. 
