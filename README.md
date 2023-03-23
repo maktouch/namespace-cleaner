@@ -14,7 +14,6 @@ flowchart TD
     C --> E[Close]
     D --> F[Delete Namespace];
     E --> F
-    
 ```
 
 When a PR opens, we start the build, which takes a few minutes. After that, it gets deployed to our review cluster, in a dedicated namespace. Once the PR is merged or closed, an action triggers the deletion. 
@@ -25,7 +24,7 @@ This solves that by comparing namespaces with PRs. If it's not in the open PR li
 
 ## How to run
 
-Since it's made to interface with Kubernetes, it's only logical that you run this in Kubernetes as a CronJob. 
+Since it's made to interface with Kubernetes, it's only logical that you run this in Kubernetes as a CronJob. I suggest you run it with the correct RBAC and service name. 
 
 ```yaml
 apiVersion: batch/v1
@@ -45,6 +44,7 @@ spec:
             app: namespace-cleaner
         spec:
           restartPolicy: OnFailure
+          serviceAccountName: namespace-cleaner
           containers:
             - name: namespace-cleaner
               image: 'maktouch/namespace-cleaner:latest'
@@ -60,7 +60,57 @@ spec:
                 requests:
                   cpu: 50m
                   memory: 64M
+
+---
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: namespace-cleaner
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: namespace-cleaner-role
+rules:
+- apiGroups:
+  - ""
+  - extensions
+  - apps
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - watch
+  - delete
+  - list
+- nonResourceURLs:
+  - '*'
+  verbs:
+  - get
+  - watch
+  - list
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: namespace-cleaner-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: namespace-cleaner
 ```
+
+```
+
+
 
 ## Configuration
 
@@ -68,6 +118,6 @@ spec:
 | --- | ------------| ---------| --------|
 | GITHUB_REPOSITORY | The Github Repo in ORGANIZATION/REPO format | yes | -
 | GITHUB_TOKEN | The Github Personal Token | yes | -
-| K8S_CREDENTIALS | The Kubernetes credentials in YAML or JSON. If you don't provide this, it'll use the default service account, and you'll have to configure RBAC yourself. | probably yes | -
+| K8S_CREDENTIALS | The Kubernetes credentials in YAML or JSON. I suggest you use RBAC instead | no | -
 NAMESPACE_REGEX | The namespace format. By default, it looks for namespaces that looks like `rev-{some-digits}`. This is how you change the pattern. Make sure you escape the regex properly. | no | `rev-(\\d+)`
 NAMESPACE_BLACKLIST | Maybe you want to project a PR. This is how you do it. It's comma-separated, like `rev-1,rev-3` | no | -
